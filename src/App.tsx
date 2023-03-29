@@ -6,6 +6,7 @@ const App: React.FC = () => {
   const [inputFile, setInputFile] = useState<File | null>(null);
   const [outputFile, setOutputFile] = useState<string | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
+  const [conversionTime, setConversionTime] = useState<number | null>(null);
 
   const handleConvert = async () => {
     const ffmpeg = Ffmpeg.createFFmpeg({ log: true });
@@ -19,8 +20,11 @@ const App: React.FC = () => {
     await ffmpeg.FS("writeFile", "input.webm", await fetchFile(inputFile));
 
     // Run the ffmpeg command to convert the file
+    const startTime = performance.now();
     await ffmpeg.setProgress(({ ratio }) => setProgress(Math.round(ratio * 100)));
     await ffmpeg.run("-i", "input.webm", "output.mp4");
+    const endTime = performance.now();
+    setConversionTime(Math.round(endTime - startTime));
 
     // Read the output file
     const data = await ffmpeg.FS("readFile", "output.mp4");
@@ -70,6 +74,7 @@ const App: React.FC = () => {
         {outputFile && (
           <div className="mt-4">
             <video className="w-full" controls src={outputFile} />
+            <p className="mt-2">Conversion time: {Number(conversionTime) / 1000} s</p>
           </div>
         )}
       </div>
