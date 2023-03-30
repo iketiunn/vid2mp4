@@ -4,6 +4,11 @@ WebM to MP4 Converter
 This is a simple web application that allows you to convert WebM video files to MP4 format.
 The application is built with React and uses the ffmpeg.wasm library to perform the file conversion in the browser.
 
+## TODO
+
+- [ ] faster conversion with paramter
+- [ ] cache ffmpeg.core (8mb) which is unable to cached in localstorage 
+
 ## Tech Stack
 
 - Vite
