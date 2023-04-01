@@ -77,8 +77,8 @@ const App: React.FC = () => {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
-      <div className="w-1/2 bg-white rounded-lg p-8">
+    <div className="flex flex-col items-center justify-center bg-gray-100">
+      <div className="w-full md:w-1/2 bg-white rounded-lg p-8">
         <h1 className="text-3xl font-bold mb-4">WebM to MP4 Converter</h1>
         <div
           {...getRootProps()}
