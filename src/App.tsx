@@ -46,12 +46,13 @@ const App: React.FC = () => {
     }
 
     // Read the input file
-    ffmpeg.FS("writeFile", "input.webm", await fetchFile(inputFile));
+    ffmpeg.FS("writeFile", "input.mp4", await fetchFile(inputFile));
 
     // Run the ffmpeg command to convert the file
     const startTime = performance.now();
     ffmpeg.setProgress(({ ratio }) => setProgress(Math.round(ratio * 100)));
-    await ffmpeg.run("-i", "input.webm", "output.mp4", "-row-mt", "1");
+    await ffmpeg.run("-i", "input.mp4", "-vcodec", "libx264", "-crf", "20", "-preset", "veryslow", "output.mp4", "-row-mt", "1");
+
     const endTime = performance.now();
     setConversionTime(Math.round(endTime - startTime));
 
@@ -88,8 +89,8 @@ const App: React.FC = () => {
           {isDragActive ? (
             <p>Drop the file here ...</p>
           ) : (
-            <p>Drag and drop a WebM file here, or click to select a file</p>
-          )}
+              <p>Drag and drop a WebM file here, or click to select a file</p>
+            )}
         </div>
         {inputFile && (
           <div className="mt-4">
@@ -127,7 +128,7 @@ const App: React.FC = () => {
             </p>
           </div>
         )}
-        
+
         <footer className="footer items-center justify-between py-20 text-neutral-content">
           <div className="items-end grid-flow-col">
             <p>Copyright © 2023 - All right reserved</p>
