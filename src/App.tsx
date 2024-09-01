@@ -39,16 +39,15 @@ async function getFfmpegWasmPath() {
 
 const App: React.FC = () => {
   const ffmpegRef = useRef(new FFmpeg());
-  const [inputUrl, setInputUrl] = useState<string>("");
   const [inputFile, setInputFile] = useState<File | null>(null);
   const [outputFile, setOutputFile] = useState<string | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
   const [conversionTime, setConversionTime] = useState<number | null>(null);
   const [isDownloading, setIsDownloading] = useState<boolean>(false);
 
-  ffmpegRef.current.on("log", ({ message, type }) => {
-    console.log(type, message);
-  });
+  //ffmpegRef.current.on("log", ({ message, type }) => {
+  //  console.log(type, message);
+  //});
 
   const handleConvert = async () => {
     setIsDownloading(true);
@@ -63,8 +62,6 @@ const App: React.FC = () => {
     let inputData: Uint8Array | null = null;
     if (inputFile) {
       inputData = await fetchFile(inputFile);
-    } else if (inputUrl) {
-      inputData = await fetchUrl(inputUrl);
     }
 
     if (!inputData) {
@@ -77,7 +74,6 @@ const App: React.FC = () => {
     // Run the ffmpeg command to convert the file
     const startTime = performance.now();
     ffmpeg.on("progress", ({ progress }) => {
-      console.log(progress);
       setProgress(Math.round(progress * 100));
     });
     await ffmpeg.exec([
@@ -106,25 +102,20 @@ const App: React.FC = () => {
   };
 
   const fetchFile = async (file: File) => {
+    // Check file type
     const response = await fetch(URL.createObjectURL(file));
-    return new Uint8Array(await response.arrayBuffer());
-  };
-
-  const fetchUrl = async (url: string) => {
-    const response = await fetch(url);
     return new Uint8Array(await response.arrayBuffer());
   };
 
   const onDrop = (acceptedFiles: File[]) => {
     setInputFile(acceptedFiles[0]);
-    setInputUrl("");
   };
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, accept: { "video/webm": [".webm"] }});
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
-      <div className="w-full md:w-1/2 bg-white rounded-lg p-8">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 px-12 md:px-0">
+      <div className="w-full md:w-2/3 bg-white rounded-lg p-8">
         <h1 className="text-3xl font-bold mb-4">WebM to MP4 Converter</h1>
         <div
           {...getRootProps()}
@@ -137,18 +128,6 @@ const App: React.FC = () => {
             <p>Drag and drop a WebM file here, or click to select a file</p>
           )}
         </div>
-        <div className="mt-4">
-          <input
-            type="text"
-            placeholder="Enter video URL"
-            value={inputUrl}
-            onChange={(e) => {
-              setInputUrl(e.target.value);
-              setInputFile(null); // Clear file input if a URL is entered
-            }}
-            className="input input-bordered w-full"
-          />
-        </div>
         {inputFile && (
           <div className="mt-4">
             <p>Selected file: {inputFile.name}</p>
@@ -157,7 +136,7 @@ const App: React.FC = () => {
         <div className="mt-4">
           <button
             className="btn btn-accent"
-            disabled={!inputFile && !inputUrl}
+            disabled={!inputFile || isDownloading || progress !== null}
             onClick={handleConvert}
           >
             Convert
@@ -186,11 +165,29 @@ const App: React.FC = () => {
           </div>
         )}
 
-        <footer className="footer items-center justify-between py-20 text-neutral-content">
-          <div className="items-end grid-flow-col">
-            <p>Copyright © 2023 - All right reserved</p>
+        <footer className="footer items-center justify-between pt-20 text-gray-400">
+          <div className="items-end grid-flow-col ">
+            <p>Copyright © 2023 - All right reserved </p>
           </div>
           <div className="grid-flow-col">
+          {/* add home link to about page */}
+            <a href="https://blog.sideeffect.dev/about" target="_blank">
+              <svg 
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/>
+                <path d="M2 12h20"/>
+              </svg>
+            </a>
             <a href="https://github.com/iketiunn/webm-to-mp4" target="_blank">
               <svg
                 width="20"
