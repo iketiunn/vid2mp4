@@ -1,66 +1,105 @@
-import React, { useState } from "react";
-import Ffmpeg from "@ffmpeg/ffmpeg";
+import React, { useRef, useState } from "react";
+import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { useDropzone } from "react-dropzone";
 import { get, set } from "idb-keyval";
 
-const KEY = "ffmpeg-core.wasm";
+const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm"; // If you are a vite user, use esm in baseURL instead of umd
+const WASM = "ffmpeg-core.wasm";
+const JS = "ffmpeg-core.js";
+//const WORKER = "ffmpeg-core.worker.js";
 
 async function getFfmpegWasmPath() {
-  let buffer = await get(KEY);
-  if (!buffer) {
-    console.log("fetching wasm file...");
-    const response = await fetch(
-      "https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.wasm"
-    );
-    buffer = await response.arrayBuffer();
-    set(KEY, buffer);
-    console.log("wasm file fetched and stored in indexedDB");
+  //let [wasm, js] = await Promise.all([get(WASM), get(JS)]);
+  let [wasm, js]: any[] = [undefined, undefined, undefined];
+  if (!wasm || !js) {
+    console.log("fetching wasm files...");
+    const [wasmResponse, jsResponse] = await Promise.all([
+      fetch(`${baseURL}/${WASM}`).then((res) => res.arrayBuffer()),
+      fetch(`${baseURL}/${JS}`).then((res) => res.text()), // TODO: arrayBuffer?
+      //fetch(`${baseURL}/${WORKER}`).then((res) => res.text()),
+    ]);
+    await Promise.all([
+      set(WASM, wasmResponse),
+      set(JS, jsResponse),
+      //set(WORKER, workerResponse),
+    ]);
+    wasm = wasmResponse;
+    js = jsResponse;
+    //worker = workerResponse;
+    console.log("wasm files fetched and stored in indexedDB");
   }
-  console.log("wasm file loaded");
-  const blob = new Blob([buffer], { type: "application/wasm" });
-  const url = URL.createObjectURL(blob);
+  console.log("wasm files loaded");
 
-  return url;
+  return [
+    URL.createObjectURL(new Blob([wasm], { type: "application/wasm" })),
+    URL.createObjectURL(new Blob([js], { type: "application/javascript" })),
+    //URL.createObjectURL(new Blob([worker], { type: "application/javascript" })),
+  ];
 }
 
 const App: React.FC = () => {
+  const ffmpegRef = useRef(new FFmpeg());
+  const [inputUrl, setInputUrl] = useState<string>("");
   const [inputFile, setInputFile] = useState<File | null>(null);
   const [outputFile, setOutputFile] = useState<string | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
   const [conversionTime, setConversionTime] = useState<number | null>(null);
   const [isDownloading, setIsDownloading] = useState<boolean>(false);
 
+  ffmpegRef.current.on("log", ({ message, type }) => {
+    console.log(type, message);
+  });
+
   const handleConvert = async () => {
     setIsDownloading(true);
-    const wasmPath = await getFfmpegWasmPath();
+    const [wasmURL, coreURL] = await getFfmpegWasmPath();
     setIsDownloading(false);
-    const ffmpeg = Ffmpeg.createFFmpeg({
-      wasmPath,
-      log: true,
+    const ffmpeg = ffmpegRef.current;
+    await ffmpeg.load({
+      coreURL,
+      wasmURL,
     });
 
-    await ffmpeg.load();
+    let inputData: Uint8Array | null = null;
+    if (inputFile) {
+      inputData = await fetchFile(inputFile);
+    } else if (inputUrl) {
+      inputData = await fetchUrl(inputUrl);
+    }
 
-    if (!inputFile) {
+    if (!inputData) {
       return;
     }
 
     // Read the input file
-    ffmpeg.FS("writeFile", "input.mp4", await fetchFile(inputFile));
+    await ffmpeg.writeFile("input.webm", inputData);
 
     // Run the ffmpeg command to convert the file
     const startTime = performance.now();
-    ffmpeg.setProgress(({ ratio }) => setProgress(Math.round(ratio * 100)));
-    await ffmpeg.run("-i", "input.mp4", "-vcodec", "libx264", "-crf", "20", "-preset", "veryslow", "output.mp4", "-row-mt", "1");
+    ffmpeg.on("progress", ({ progress }) => {
+      console.log(progress);
+      setProgress(Math.round(progress * 100));
+    });
+    await ffmpeg.exec([
+      "-i",
+      "input.webm", // Input file
+      "-preset",
+      "ultrafast", // Use the fastest preset
+      "-c:v",
+      "libx264", // Specify the video codec
+      "-crf",
+      "28", // Set a higher CRF for faster encoding with reduced quality
+      "-c:a",
+      "copy", // Copy the audio stream without re-encoding
+      "output.mp4", // Output file
+    ]);
 
     const endTime = performance.now();
     setConversionTime(Math.round(endTime - startTime));
 
     // Read the output file
-    const data = ffmpeg.FS("readFile", "output.mp4");
-    const url = URL.createObjectURL(
-      new Blob([data.buffer], { type: "video/mp4" })
-    );
+    const data = await ffmpeg.readFile("output.mp4");
+    const url = URL.createObjectURL(new Blob([data], { type: "video/mp4" }));
 
     setOutputFile(url);
     setProgress(null);
@@ -71,8 +110,14 @@ const App: React.FC = () => {
     return new Uint8Array(await response.arrayBuffer());
   };
 
+  const fetchUrl = async (url: string) => {
+    const response = await fetch(url);
+    return new Uint8Array(await response.arrayBuffer());
+  };
+
   const onDrop = (acceptedFiles: File[]) => {
     setInputFile(acceptedFiles[0]);
+    setInputUrl("");
   };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
@@ -89,8 +134,20 @@ const App: React.FC = () => {
           {isDragActive ? (
             <p>Drop the file here ...</p>
           ) : (
-              <p>Drag and drop a WebM file here, or click to select a file</p>
-            )}
+            <p>Drag and drop a WebM file here, or click to select a file</p>
+          )}
+        </div>
+        <div className="mt-4">
+          <input
+            type="text"
+            placeholder="Enter video URL"
+            value={inputUrl}
+            onChange={(e) => {
+              setInputUrl(e.target.value);
+              setInputFile(null); // Clear file input if a URL is entered
+            }}
+            className="input input-bordered w-full"
+          />
         </div>
         {inputFile && (
           <div className="mt-4">
@@ -100,7 +157,7 @@ const App: React.FC = () => {
         <div className="mt-4">
           <button
             className="btn btn-accent"
-            disabled={!inputFile}
+            disabled={!inputFile && !inputUrl}
             onClick={handleConvert}
           >
             Convert
