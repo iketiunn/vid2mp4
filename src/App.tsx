@@ -127,7 +127,7 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 px-12 md:px-0">
       <div className="w-full md:w-2/3 bg-white rounded-lg p-8">
-        <h1 className="text-3xl font-bold mb-4">WebM to MP4 Converter</h1>
+        <h1 className="text-3xl font-bold mb-4">Any video to MP4 Converter/Compressor</h1>
         <div
           {...getRootProps()}
           className="border-2 border-dashed rounded-md p-6 mt-4"
