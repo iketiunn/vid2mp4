@@ -111,7 +111,7 @@ const App: React.FC = () => {
     setInputFile(acceptedFiles[0]);
   };
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, accept: { "video/webm": [".webm"] }});
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, accept: { "video/*": [] }});
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 px-12 md:px-0">
@@ -125,7 +125,7 @@ const App: React.FC = () => {
           {isDragActive ? (
             <p>Drop the file here ...</p>
           ) : (
-            <p>Drag and drop a WebM file here, or click to select a file</p>
+            <p>Drag and drop a video file here, or click to select a file</p>
           )}
         </div>
         {inputFile && (
