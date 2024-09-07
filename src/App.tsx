@@ -41,6 +41,7 @@ const App: React.FC = () => {
   const ffmpegRef = useRef(new FFmpeg());
   const [inputFile, setInputFile] = useState<File | null>(null);
   const [outputFile, setOutputFile] = useState<string | null>(null);
+  const [isCompressing, setIsCompressing] = useState<boolean>(false);
   const [progress, setProgress] = useState<number | null>(null);
   const [conversionTime, setConversionTime] = useState<number | null>(null);
   const [isDownloading, setIsDownloading] = useState<boolean>(false);
@@ -69,27 +70,37 @@ const App: React.FC = () => {
     }
 
     // Read the input file
-    await ffmpeg.writeFile("input.webm", inputData);
+    const fileExtension = inputFile?.name.split(".").pop();
+    const fileName = `input.${fileExtension}`;
+    await ffmpeg.writeFile(fileName, inputData);
 
     // Run the ffmpeg command to convert the file
     const startTime = performance.now();
     ffmpeg.on("progress", ({ progress }) => {
       setProgress(Math.round(progress * 100));
     });
-    await ffmpeg.exec([
-      "-i",
-      "input.webm", // Input file
-      "-preset",
-      "ultrafast", // Use the fastest preset
-      "-c:v",
-      "libx264", // Specify the video codec
-      "-crf",
-      "28", // Set a higher CRF for faster encoding with reduced quality
-      "-c:a",
-      "copy", // Copy the audio stream without re-encoding
-      "output.mp4", // Output file
-    ]);
-
+    // Mine - 40s, thier - 6s (https://tools.rotato.app/compress)
+    
+    if (isCompressing) {
+      await ffmpeg.exec([
+        "-i", fileName,
+        "-c:v", "libx264",
+        "-preset", "ultrafast",
+        "-movflags", "faststart",
+        "-tag:v", "avc1",
+        "-crf", "30",
+        "-c:a", "copy",
+        "-y",
+        "output.mp4"
+      ]);
+    } else {
+      await ffmpeg.exec([
+        "-i", fileName,
+        "-c", "copy",
+        "-y",
+        "output.mp4"
+      ]);
+    }
     const endTime = performance.now();
     setConversionTime(Math.round(endTime - startTime));
 
@@ -133,7 +144,7 @@ const App: React.FC = () => {
             <p>Selected file: {inputFile.name}</p>
           </div>
         )}
-        <div className="mt-4">
+        <div className="mt-4 flex flex-wrap gap-x-2">
           <button
             className="btn btn-accent"
             disabled={!inputFile || isDownloading || progress !== null}
@@ -141,6 +152,10 @@ const App: React.FC = () => {
           >
             Convert
           </button>
+          <label className="label cursor-pointer flex gap-x-2">
+            <span className="label-text">Compress</span>
+            <input type="checkbox" className="checkbox" checked={isCompressing} onChange={() => setIsCompressing(!isCompressing) } />
+          </label>
         </div>
         {isDownloading && (
           <p className="mt-2"> Downloading the converter... </p>
