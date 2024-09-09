@@ -2,6 +2,11 @@
 # yarn lockfile v1
 
 
+"@diffusion-studio/ffmpeg-js@^0.2.3":
+  version "0.2.3"
+  resolved "https://registry.yarnpkg.com/@diffusion-studio/ffmpeg-js/-/ffmpeg-js-0.2.3.tgz#21e23b035552d4f7e675ad3e7a228067a6aae194"
+  integrity sha512-SkBf6N8FJU1nLfHDO0h1jjfTzpKd84149yTsvyigAmqOgnc4g9mWqBUWzzcAs8yawhMpI1uRj//OAnHxU6WPRw==
+
 "@esbuild/android-arm64@0.17.14":
   version "0.17.14"
   resolved "https://registry.yarnpkg.com/@esbuild/android-arm64/-/android-arm64-0.17.14.tgz#4624cea3c8941c91f9e9c1228f550d23f1cef037"
@@ -111,28 +116,6 @@
   version "0.17.14"
   resolved "https://registry.yarnpkg.com/@esbuild/win32-x64/-/win32-x64-0.17.14.tgz#e81fb49de05fed91bf74251c9ca0343f4fc77d31"
   integrity sha512-gPQmsi2DKTaEgG14hc3CHXHp62k8g6qr0Pas+I4lUxRMugGSATh/Bi8Dgusoz9IQ0IfdrvLpco6kujEIBoaogA==
-
-"@ffmpeg/core@^0.11.0":
-  version "0.11.0"
-  resolved "https://registry.yarnpkg.com/@ffmpeg/core/-/core-0.11.0.tgz#fc24fe5af587f83cd2575d0e45de455d8eed9ba9"
-  integrity sha512-9Tt/+2PMpkGPXUK8n6He9G8Y+qR6qmCPSCw9iEKZxHHOvJ9BE/r0Fccj+YgDZTlyu6rXxc9x6EqCaFBIt7qzjA==
-
-"@ffmpeg/ffmpeg@^0.12.10":
-  version "0.12.10"
-  resolved "https://registry.yarnpkg.com/@ffmpeg/ffmpeg/-/ffmpeg-0.12.10.tgz#e3cce21f21f11f33dfc1ec1d5ad5694f4a3073c9"
-  integrity sha512-lVtk8PW8e+NUzGZhPTWj2P1J4/NyuCrbDD3O9IGpSeLYtUZKBqZO8CNj1WYGghep/MXoM8e1qVY1GztTkf8YYQ==
-  dependencies:
-    "@ffmpeg/types" "^0.12.2"
-
-"@ffmpeg/types@^0.12.2":
-  version "0.12.2"
-  resolved "https://registry.yarnpkg.com/@ffmpeg/types/-/types-0.12.2.tgz#bc7eef321ae50225c247091f1f23fd3087c6aa1d"
-  integrity sha512-NJtxwPoLb60/z1Klv0ueshguWQ/7mNm106qdHkB4HL49LXszjhjCCiL+ldHJGQ9ai2Igx0s4F24ghigy//ERdA==
-
-"@ffmpeg/util@^0.12.1":
-  version "0.12.1"
-  resolved "https://registry.yarnpkg.com/@ffmpeg/util/-/util-0.12.1.tgz#98afa20d7b4c0821eebdb205ddcfa5d07b0a4f53"
-  integrity sha512-10jjfAKWaDyb8+nAkijcsi9wgz/y26LOc1NKJradNMyCIl6usQcBbhkjX5qhALrSBcOy6TOeksunTYa+a03qNQ==
 
 "@nodelib/fs.scandir@2.1.5":
   version "2.1.5"
@@ -553,13 +536,6 @@ has@^1.0.3:
   dependencies:
     function-bind "^1.1.1"
 
-idb-keyval@^6.2.0:
-  version "6.2.0"
-  resolved "https://registry.yarnpkg.com/idb-keyval/-/idb-keyval-6.2.0.tgz#3af94a3cc0689d6ee0bc9e045d2a3340ea897173"
-  integrity sha512-uw+MIyQn2jl3+hroD7hF8J7PUviBU7BPKWw4f/ISf32D4LoGu98yHjrzWWJDASu9QNrX10tCJqk9YY0ClWm8Ng==
-  dependencies:
-    safari-14-idb-fix "^3.0.0"
-
 inflight@^1.0.4:
   version "1.0.6"
   resolved "https://registry.yarnpkg.com/inflight/-/inflight-1.0.6.tgz#49bd6331d7d02d0c09bc910a1075ba8165b56df9"
@@ -879,11 +855,6 @@ run-parallel@^1.1.9:
   integrity sha512-5l4VyZR86LZ/lDxZTR6jqL8AFE2S0IFLMP26AbjsLVADxHdhB/c0GUsH+y39UfCi3dzz8OlQuPmnaJOMoDHQBA==
   dependencies:
     queue-microtask "^1.2.2"
-
-safari-14-idb-fix@^3.0.0:
-  version "3.0.0"
-  resolved "https://registry.yarnpkg.com/safari-14-idb-fix/-/safari-14-idb-fix-3.0.0.tgz#450fc049b996ec7f3fd9ca2f89d32e0761583440"
-  integrity sha512-eBNFLob4PMq8JA1dGyFn6G97q3/WzNtFK4RnzT1fnLq+9RyrGknzYiM/9B12MnKAxuj1IXr7UKYtTNtjyKMBog==
 
 scheduler@^0.23.0:
   version "0.23.0"

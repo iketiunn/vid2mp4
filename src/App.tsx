@@ -1,121 +1,74 @@
-import React, { useRef, useState } from "react";
-import { FFmpeg } from "@ffmpeg/ffmpeg";
+import React, { useEffect, useRef, useState } from "react";
+import { FFmpeg } from '@diffusion-studio/ffmpeg-js';
 import { useDropzone } from "react-dropzone";
-import { get, set } from "idb-keyval";
-
-const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm"; // If you are a vite user, use esm in baseURL instead of umd
-const WASM = "ffmpeg-core.wasm";
-const JS = "ffmpeg-core.js";
-//const WORKER = "ffmpeg-core.worker.js";
-
-async function getFfmpegWasmPath() {
-  //let [wasm, js] = await Promise.all([get(WASM), get(JS)]);
-  let [wasm, js]: any[] = [undefined, undefined, undefined];
-  if (!wasm || !js) {
-    console.log("fetching wasm files...");
-    const [wasmResponse, jsResponse] = await Promise.all([
-      fetch(`${baseURL}/${WASM}`).then((res) => res.arrayBuffer()),
-      fetch(`${baseURL}/${JS}`).then((res) => res.text()), // TODO: arrayBuffer?
-      //fetch(`${baseURL}/${WORKER}`).then((res) => res.text()),
-    ]);
-    await Promise.all([
-      set(WASM, wasmResponse),
-      set(JS, jsResponse),
-      //set(WORKER, workerResponse),
-    ]);
-    wasm = wasmResponse;
-    js = jsResponse;
-    //worker = workerResponse;
-    console.log("wasm files fetched and stored in indexedDB");
-  }
-  console.log("wasm files loaded");
-
-  return [
-    URL.createObjectURL(new Blob([wasm], { type: "application/wasm" })),
-    URL.createObjectURL(new Blob([js], { type: "application/javascript" })),
-    //URL.createObjectURL(new Blob([worker], { type: "application/javascript" })),
-  ];
-}
 
 const App: React.FC = () => {
-  const ffmpegRef = useRef(new FFmpeg());
+  const ffmpegRef = useRef<FFmpeg>();
   const [inputFile, setInputFile] = useState<File | null>(null);
   const [outputFile, setOutputFile] = useState<string | null>(null);
-  const [isCompressing, setIsCompressing] = useState<boolean>(false);
   const [progress, setProgress] = useState<number | null>(null);
+  const [inputFileSize, setInputFileSize] = useState<number>(0);
+  const [outputFileSize, setOutputFileSize] = useState<number>(0);
   const [conversionTime, setConversionTime] = useState<number | null>(null);
-  const [isDownloading, setIsDownloading] = useState<boolean>(false);
+  const [isDownloading, setIsDownloading] = useState<boolean>(true);
 
-  //ffmpegRef.current.on("log", ({ message, type }) => {
-  //  console.log(type, message);
-  //});
+  useEffect(() => {
+    ffmpegRef.current = new FFmpeg({
+      log: false,
+      config: "gpl-extended",
+    });
+    ffmpegRef.current.whenReady(() =>{
+      setIsDownloading(false);
+    });
+  }, []);
 
   const handleConvert = async () => {
     setIsDownloading(true);
-    const [wasmURL, coreURL] = await getFfmpegWasmPath();
     setIsDownloading(false);
     const ffmpeg = ffmpegRef.current;
-    await ffmpeg.load({
-      coreURL,
-      wasmURL,
-    });
-
-    let inputData: Uint8Array | null = null;
-    if (inputFile) {
-      inputData = await fetchFile(inputFile);
-    }
-
-    if (!inputData) {
+    
+    if (!ffmpeg) {
       return;
     }
 
-    // Read the input file
-    const fileExtension = inputFile?.name.split(".").pop();
-    const fileName = `input.${fileExtension}`;
-    await ffmpeg.writeFile(fileName, inputData);
-
-    // Run the ffmpeg command to convert the file
-    const startTime = performance.now();
-    ffmpeg.on("progress", ({ progress }) => {
-      setProgress(Math.round(progress * 100));
-    });
-    // Mine - 40s, thier - 6s (https://tools.rotato.app/compress)
-    
-    if (isCompressing) {
-      await ffmpeg.exec([
-        "-i", fileName,
-        "-c:v", "libx264",
-        "-preset", "ultrafast",
-        "-movflags", "faststart",
-        "-tag:v", "avc1",
-        "-crf", "30",
-        "-c:a", "copy",
-        "-y",
-        "output.mp4"
-      ]);
-    } else {
-      await ffmpeg.exec([
-        "-i", fileName,
-        "-c", "copy",
-        "-y",
-        "output.mp4"
-      ]);
+    if (!inputFile) {
+      return;
     }
+
+    const startTime = performance.now();
+    const inputData = await fetch(URL.createObjectURL(inputFile)).then(res => res.blob());
+    setInputFileSize(inputData.size);
+    const meta = await ffmpeg.meta(inputData);
+    const duration = meta.duration;
+    await ffmpeg.writeFile(inputFile.name, inputData);
+    ffmpeg.onMessage(msg => {
+      const [type, data] = msg.split("=");
+      if (type === "out_time_ms" && duration) {
+        setProgress(Math.round((parseInt(data) / (duration * 1e6)) * 100));
+      }
+      if (type === "total_size") {
+        setOutputFileSize(parseInt(data));
+      }
+    });
+    const outputFileName = "output.mp4";
+    await ffmpeg
+      .exec([
+        "-i", inputFile.name,
+        "-c:v", "libx264",
+        "-preset", "superfast",
+        "-movflags", "faststart",
+        "-crf", "30",
+        "-progress", "-",
+        "-v", "",
+        "-y",
+        outputFileName
+      ])
+    const data = ffmpeg.readFile(outputFileName);
+    const url = URL.createObjectURL(new Blob([data], { type: "video/mp4" }));
     const endTime = performance.now();
     setConversionTime(Math.round(endTime - startTime));
-
-    // Read the output file
-    const data = await ffmpeg.readFile("output.mp4");
-    const url = URL.createObjectURL(new Blob([data], { type: "video/mp4" }));
-
     setOutputFile(url);
     setProgress(null);
-  };
-
-  const fetchFile = async (file: File) => {
-    // Check file type
-    const response = await fetch(URL.createObjectURL(file));
-    return new Uint8Array(await response.arrayBuffer());
   };
 
   const onDrop = (acceptedFiles: File[]) => {
@@ -127,7 +80,7 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 px-12 md:px-0">
       <div className="w-full md:w-2/3 bg-white rounded-lg p-8">
-        <h1 className="text-3xl font-bold mb-4">Any video to MP4 Converter/Compressor</h1>
+        <h1 className="text-3xl font-bold mb-4">Any video to MP4</h1>
         <div
           {...getRootProps()}
           className="border-2 border-dashed rounded-md p-6 mt-4"
@@ -152,10 +105,6 @@ const App: React.FC = () => {
           >
             Convert
           </button>
-          <label className="label cursor-pointer flex gap-x-2">
-            <span className="label-text">Compress</span>
-            <input type="checkbox" className="checkbox" checked={isCompressing} onChange={() => setIsCompressing(!isCompressing) } />
-          </label>
         </div>
         {isDownloading && (
           <p className="mt-2"> Downloading the converter... </p>
@@ -171,14 +120,16 @@ const App: React.FC = () => {
             <p className="mt-2">{progress}%</p>
           </div>
         )}
-        {outputFile && (
-          <div className="mt-4">
+        <div className="mt-4">
+          {outputFile && <>
             <video className="w-full" controls src={outputFile} />
             <p className="mt-2">
               Conversion time: {Number(conversionTime) / 1000} s
             </p>
-          </div>
-        )}
+          </>}
+          {inputFileSize > 0 && <p>Input file size: {(inputFileSize / 1024 / 1024).toFixed(2)} MB</p>}
+          {outputFileSize > 0 && <p>Output file size: {(outputFileSize / 1024 / 1024).toFixed(2)} MB</p>}
+        </div>
 
         <footer className="footer items-center justify-between pt-20 text-gray-400">
           <div className="items-end grid-flow-col ">
